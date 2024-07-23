@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "io.day.requestqueuekmp.android"
+    namespace = "io.day.requestqueuekmp"
     compileSdk = 34
     defaultConfig {
-        applicationId = "io.day.requestqueuekmp.android"
+        applicationId = "io.day.requestqueuekmp"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
