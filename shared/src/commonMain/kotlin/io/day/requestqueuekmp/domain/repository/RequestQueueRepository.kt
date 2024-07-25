@@ -18,7 +18,14 @@ interface RequestQueueRepository {
      * Sets a callback function that will be invoked whenever the size of the request queue changes.
      *
      * @param callback A function that takes the current queue size and the priority of the request that caused the change.
-     * The callback will be called with these parameters whenever the queue size changes.
+     * The callback will be called with size and priority parameters whenever the queue size changes.
      */
     fun setOnQueueSizeChangedCallback(callback: (size: Int, priority: QueuePriority) -> Unit)
+
+    /**
+     * Sets a callback to be invoked when a network error occurs.
+     *
+     * @param callback A function to be called with the error message.
+     */
+    fun setOnNetworkErrorCallback(callback: (message: String) -> Unit)
 }

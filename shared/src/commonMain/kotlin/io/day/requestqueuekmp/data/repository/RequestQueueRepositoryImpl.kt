@@ -1,17 +1,21 @@
 package io.day.requestqueuekmp.data.repository
 
+import dev.tmapps.konnection.Konnection
 import io.day.requestqueuekmp.common.QueuePriority
 import io.day.requestqueuekmp.common.QueuePriority.HIGH
 import io.day.requestqueuekmp.common.QueuePriority.LOW
 import io.day.requestqueuekmp.common.Url
+import io.day.requestqueuekmp.data.common.NetworkStatus.isNetworkAvailable
 import io.day.requestqueuekmp.data.network.ApiServiceImpl
 import io.day.requestqueuekmp.domain.repository.RequestQueueRepository
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -23,12 +27,36 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
     private val lowPriorityQueue = mutableListOf<Url>()
     private var processingJob: Job? = null
 
-    private val scope by lazy { CoroutineScope(Dispatchers.Default + SupervisorJob()) }
-
     private var onQueueSizeChanged: ((size: Int, priority: QueuePriority) -> Unit)? = null
+    private var onNetworkError: ((message: String) -> Unit)? = null
+
+    private val scope by lazy { CoroutineScope(Dispatchers.IO + SupervisorJob()) }
 
     override fun setOnQueueSizeChangedCallback(callback: (size: Int, priority: QueuePriority) -> Unit) {
         onQueueSizeChanged = callback
+    }
+
+    override fun setOnNetworkErrorCallback(callback: (message: String) -> Unit) {
+        onNetworkError = callback
+    }
+
+    init {
+        scope.launch {
+            observeConnectionState()
+        }
+    }
+
+    private suspend fun observeConnectionState() {
+        Konnection.createInstance().observeHasConnection().collect { isAvailable ->
+            setNetworkAvailability(isAvailable)
+        }
+    }
+
+    private fun setNetworkAvailability(isAvailable: Boolean) {
+        isNetworkAvailable = isAvailable
+        if (isAvailable) {
+            startProcessing()
+        }
     }
 
     private fun invokeQueueSizeChanged(isHighPriorityQueue: Boolean) {
@@ -56,7 +84,7 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
     }
 
     private fun startProcessing() {
-        if (processingJob?.isActive != true) {
+        if (processingJob?.isActive != true && isNetworkAvailable) {
             processingJob = scope.launch {
                 processQueue()
             }
@@ -65,6 +93,10 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
 
     private suspend fun processQueue() {
         while (true) {
+            if (!isNetworkAvailable) {
+                delayUntilNetworkAvailable()
+            }
+
             val requestUrl = mutex.withLock {
                 // Get items from the high priority queue first
                 highPriorityQueue.getOrElse(0) { lowPriorityQueue.getOrNull(0) }
@@ -72,6 +104,9 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
 
             requestUrl?.let { url ->
                 val httpResponse = sendHttpRequestWithBackoff(url)
+
+                delay(2000) // TODO: for test
+
                 if (httpResponse.status == HttpStatusCode.OK) {
                     val (queueToModify, priority) = if (highPriorityQueue.isNotEmpty()) {
                         highPriorityQueue to true
@@ -89,6 +124,14 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
     }
 
     private suspend fun sendHttpRequestWithBackoff(request: Url): HttpResponse {
-        return ApiServiceImpl().sendHttpRequest(request)
+        return ApiServiceImpl().sendHttpRequest(request) {
+            onNetworkError?.invoke(it)
+        }
+    }
+
+    private suspend fun delayUntilNetworkAvailable() {
+        while (!isNetworkAvailable) {
+            delay(1000)
+        }
     }
 }
