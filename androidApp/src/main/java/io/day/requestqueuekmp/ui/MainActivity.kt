@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,6 +24,7 @@ class MainActivity : ComponentActivity() {
             AppTheme {
                 val highPriorityQueueSize = remember { mutableIntStateOf(0) }
                 val lowPriorityQueueSize = remember { mutableIntStateOf(0) }
+                val networkErrorMessage = remember { mutableStateOf("") }
 
                 requestQueueRepository.setOnQueueSizeChangedCallback { size, priority ->
                     when (priority) {
@@ -31,11 +33,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                requestQueueRepository.setOnNetworkErrorCallback {
+                    networkErrorMessage.value = it
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     RequestScreen(
+                        serverErrorMessage = networkErrorMessage.value,
                         highPriorityQueueSize = highPriorityQueueSize.intValue,
                         lowPriorityQueueSize = lowPriorityQueueSize.intValue,
                         onAddHighPriorityRequest = {
@@ -58,6 +65,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DefaultPreview() {
     AppTheme {
-        RequestScreen(0, 0, {}, {})
+        RequestScreen("", 0, 0, {}, {})
     }
 }

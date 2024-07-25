@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun RequestScreen(
+    serverErrorMessage: String,
     highPriorityQueueSize: Int,
     lowPriorityQueueSize: Int,
     onAddHighPriorityRequest: () -> Unit,
@@ -44,5 +45,7 @@ fun RequestScreen(
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = "Low Priority Queue Size: $lowPriorityQueueSize")
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(text = "Error message: $serverErrorMessage")
     }
 }
