@@ -5,7 +5,7 @@ import io.day.requestqueuekmp.common.QueuePriority
 import io.day.requestqueuekmp.common.QueuePriority.HIGH
 import io.day.requestqueuekmp.common.QueuePriority.LOW
 import io.day.requestqueuekmp.common.Url
-import io.day.requestqueuekmp.data.common.NetworkStatus.isNetworkAvailable
+import io.day.requestqueuekmp.data.common.NetworkStatus.isConnectionAvailable
 import io.day.requestqueuekmp.data.network.ApiServiceImpl
 import io.day.requestqueuekmp.domain.repository.RequestQueueRepository
 import io.ktor.client.statement.HttpResponse
@@ -29,6 +29,7 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
 
     private var onQueueSizeChanged: ((size: Int, priority: QueuePriority) -> Unit)? = null
     private var onNetworkError: ((message: String) -> Unit)? = null
+    private var onConnectionChanged: ((status: Boolean) -> Unit)? = null
 
     private val scope by lazy { CoroutineScope(Dispatchers.IO + SupervisorJob()) }
 
@@ -40,6 +41,12 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
         onNetworkError = callback
     }
 
+    override fun setOnConnectionChangedCallback(callback: (status: Boolean) -> Unit) {
+        onConnectionChanged = callback
+    }
+
+    override fun getConnectionStatus() = isConnectionAvailable
+
     init {
         scope.launch {
             observeConnectionState()
@@ -48,12 +55,13 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
 
     private suspend fun observeConnectionState() {
         Konnection.createInstance().observeHasConnection().collect { isAvailable ->
-            setNetworkAvailability(isAvailable)
+            setConnectionAvailability(isAvailable)
+            onConnectionChanged?.invoke(isAvailable)
         }
     }
 
-    private fun setNetworkAvailability(isAvailable: Boolean) {
-        isNetworkAvailable = isAvailable
+    private fun setConnectionAvailability(isAvailable: Boolean) {
+        isConnectionAvailable = isAvailable
         if (isAvailable) {
             startProcessing()
         }
@@ -84,7 +92,7 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
     }
 
     private fun startProcessing() {
-        if (processingJob?.isActive != true && isNetworkAvailable) {
+        if (processingJob?.isActive != true && isConnectionAvailable) {
             processingJob = scope.launch {
                 processQueue()
             }
@@ -93,7 +101,7 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
 
     private suspend fun processQueue() {
         while (true) {
-            if (!isNetworkAvailable) {
+            if (!isConnectionAvailable) {
                 delayUntilNetworkAvailable()
             }
 
@@ -130,7 +138,7 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
     }
 
     private suspend fun delayUntilNetworkAvailable() {
-        while (!isNetworkAvailable) {
+        while (!isConnectionAvailable) {
             delay(1000)
         }
     }

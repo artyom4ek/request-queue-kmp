@@ -28,4 +28,16 @@ interface RequestQueueRepository {
      * @param callback A function to be called with the error message.
      */
     fun setOnNetworkErrorCallback(callback: (message: String) -> Unit)
+
+    /**
+     * Sets a callback to be invoked when the connection status changes.
+     *
+     * @param callback A function to be called with the new connection status.
+     */
+    fun setOnConnectionChangedCallback(callback: (status: Boolean) -> Unit)
+
+    /**
+     * Return current connection status
+     */
+    fun getConnectionStatus(): Boolean
 }
