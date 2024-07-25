@@ -1,7 +1,7 @@
 package io.day.requestqueuekmp.data.network
 
 import io.day.requestqueuekmp.common.Url
-import io.day.requestqueuekmp.data.common.NetworkStatus.isNetworkAvailable
+import io.day.requestqueuekmp.data.common.NetworkStatus.isConnectionAvailable
 import io.day.requestqueuekmp.data.exception.ServerErrorException
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -28,13 +28,13 @@ class ApiServiceImpl : ApiService {
                 }
             } catch (e: ServerErrorException) {
                 // Notify the application if the network is available but the server is not available
-                if (isNetworkAvailable) {
+                if (isConnectionAvailable) {
                     networkError.invoke(e.message ?: NETWORK_ERROR_MESSAGE)
                 }
                 retryAttempt(retryCount++)
             } catch (e: Exception) {
                 // Notify the application if the network is available but DNS not found
-                if (isNetworkAvailable) {
+                if (isConnectionAvailable) {
                     networkError.invoke(e.message ?: NETWORK_ERROR_MESSAGE)
                 }
                 retryAttempt(retryCount++)
