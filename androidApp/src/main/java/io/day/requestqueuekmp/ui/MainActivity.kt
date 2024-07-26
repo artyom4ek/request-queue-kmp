@@ -23,23 +23,25 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import io.day.requestqueuekmp.common.QueuePriority
-import io.day.requestqueuekmp.data.repository.RequestQueueRepositoryImpl
+import io.day.requestqueuekmp.domain.repository.RequestQueueRepository
 import io.day.requestqueuekmp.ui.common.QUEUE_PRIORITY
 import io.day.requestqueuekmp.ui.common.REQUEST_QUEUE_WORK
 import io.day.requestqueuekmp.ui.common.URL
 import io.day.requestqueuekmp.ui.screen.RequestScreen
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val requestQueueRepository = RequestQueueRepositoryImpl
-        val queueSize = requestQueueRepository.getQueueSize()
 
         setContent {
             AppTheme {
+                val requestQueueRepository: RequestQueueRepository = koinInject()
+                val queueSize = requestQueueRepository.getQueueSize()
+
                 val highPriorityQueueSize = remember { mutableIntStateOf(queueSize.highPriorityQueueSize.value) }
                 val lowPriorityQueueSize = remember { mutableIntStateOf(queueSize.lowPriorityQueueSize.value) }
                 val isConnectionAvailable = remember { mutableStateOf(requestQueueRepository.getConnectionStatus()) }

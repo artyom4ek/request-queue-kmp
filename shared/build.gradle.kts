@@ -28,10 +28,10 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.logging)
             implementation(libs.konnection)
+            implementation(libs.koin.core)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
-
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
