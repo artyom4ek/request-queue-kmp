@@ -18,22 +18,31 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import io.day.requestqueuekmp.common.QueuePriority
 import io.day.requestqueuekmp.data.repository.RequestQueueRepositoryImpl
+import io.day.requestqueuekmp.ui.common.QUEUE_PRIORITY
+import io.day.requestqueuekmp.ui.common.REQUEST_QUEUE_WORK
+import io.day.requestqueuekmp.ui.common.URL
 import io.day.requestqueuekmp.ui.screen.RequestScreen
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val requestQueueRepository = RequestQueueRepositoryImpl()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val requestQueueRepository = RequestQueueRepositoryImpl
+        val queueSize = requestQueueRepository.getQueueSize()
+
         setContent {
             AppTheme {
-                val highPriorityQueueSize = remember { mutableIntStateOf(0) }
-                val lowPriorityQueueSize = remember { mutableIntStateOf(0) }
-                val isConnectionAvailable = remember {
-                    mutableStateOf(requestQueueRepository.getConnectionStatus())
-                }
+                val highPriorityQueueSize = remember { mutableIntStateOf(queueSize.highPriorityQueueSize.value) }
+                val lowPriorityQueueSize = remember { mutableIntStateOf(queueSize.lowPriorityQueueSize.value) }
+                val isConnectionAvailable = remember { mutableStateOf(requestQueueRepository.getConnectionStatus()) }
 
                 val snackbarHostState = remember { SnackbarHostState() }
                 val coroutineScope = rememberCoroutineScope()
@@ -65,15 +74,12 @@ class MainActivity : ComponentActivity() {
                             highPriorityQueueSize = highPriorityQueueSize.intValue,
                             lowPriorityQueueSize = lowPriorityQueueSize.intValue,
                             onAddHighPriorityRequest = {
-                                val url = "https://day.io"
-                                requestQueueRepository.addRequest(url, QueuePriority.HIGH)
+                                sendRequestWorker("https://day.io", QueuePriority.HIGH)
                             },
                             onAddLowPriorityRequest = {
-                                val url = "https://google.com"
-                                requestQueueRepository.addRequest(url, QueuePriority.LOW)
+                                sendRequestWorker("https://google.com", QueuePriority.LOW)
                             }
                         )
-
                         SnackbarHost(
                             hostState = snackbarHostState,
                             modifier = Modifier.align(Alignment.BottomCenter)
@@ -83,8 +89,20 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
 
+    private fun sendRequestWorker(url: String, queuePriority: QueuePriority) {
+        val workRequest = OneTimeWorkRequestBuilder<RequestQueueWorker>()
+            .setInputData(
+                workDataOf(URL to url, QUEUE_PRIORITY to queuePriority.name)
+            )
+            .build()
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            REQUEST_QUEUE_WORK,
+            ExistingWorkPolicy.REPLACE,
+            workRequest,
+        )
+    }
+}
 
 @Preview
 @Composable

@@ -9,6 +9,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlin.math.pow
 
+// TODO: change to singleton
 class ApiServiceImpl : ApiService {
 
     override suspend fun sendHttpRequest(
