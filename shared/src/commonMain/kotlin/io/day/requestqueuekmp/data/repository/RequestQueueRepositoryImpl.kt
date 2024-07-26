@@ -9,6 +9,7 @@ import io.day.requestqueuekmp.common.QueuePriority.HIGH
 import io.day.requestqueuekmp.common.QueuePriority.LOW
 import io.day.requestqueuekmp.common.Url
 import io.day.requestqueuekmp.data.common.NetworkStatus.isConnectionAvailable
+import io.day.requestqueuekmp.data.network.ApiService
 import io.day.requestqueuekmp.data.network.ApiServiceImpl
 import io.day.requestqueuekmp.domain.repository.RequestQueueRepository
 import io.ktor.client.statement.HttpResponse
@@ -23,8 +24,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
 
-object RequestQueueRepositoryImpl : RequestQueueRepository {
+class RequestQueueRepositoryImpl(
+    private val apiService: ApiService
+) : RequestQueueRepository {
 
     private val mutex = Mutex()
     private val highPriorityQueue = mutableListOf<Url>()
@@ -142,7 +146,7 @@ object RequestQueueRepositoryImpl : RequestQueueRepository {
 
     private suspend fun sendHttpRequestWithBackoff(request: Url): HttpResponse {
         return withContext(Dispatchers.IO) {
-            ApiServiceImpl().sendHttpRequest(request) {
+            apiService.sendHttpRequest(request) {
                 onNetworkError?.invoke(it)
             }
         }
