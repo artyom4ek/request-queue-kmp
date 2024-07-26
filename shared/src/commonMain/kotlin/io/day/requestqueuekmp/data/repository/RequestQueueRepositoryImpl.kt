@@ -1,6 +1,9 @@
 package io.day.requestqueuekmp.data.repository
 
 import dev.tmapps.konnection.Konnection
+import io.day.requestqueuekmp.common.HighPriorityQueueSize
+import io.day.requestqueuekmp.common.LowPriorityQueueSize
+import io.day.requestqueuekmp.common.QueueSize
 import io.day.requestqueuekmp.common.QueuePriority
 import io.day.requestqueuekmp.common.QueuePriority.HIGH
 import io.day.requestqueuekmp.common.QueuePriority.LOW
@@ -19,8 +22,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
-class RequestQueueRepositoryImpl : RequestQueueRepository {
+object RequestQueueRepositoryImpl : RequestQueueRepository {
 
     private val mutex = Mutex()
     private val highPriorityQueue = mutableListOf<Url>()
@@ -31,7 +35,7 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
     private var onNetworkError: ((message: String) -> Unit)? = null
     private var onConnectionChanged: ((status: Boolean) -> Unit)? = null
 
-    private val scope by lazy { CoroutineScope(Dispatchers.IO + SupervisorJob()) }
+    private val scope by lazy { CoroutineScope(Dispatchers.Default + SupervisorJob()) }
 
     override fun setOnQueueSizeChangedCallback(callback: (size: Int, priority: QueuePriority) -> Unit) {
         onQueueSizeChanged = callback
@@ -46,6 +50,11 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
     }
 
     override fun getConnectionStatus() = isConnectionAvailable
+
+    override fun getQueueSize(): QueueSize = QueueSize(
+        HighPriorityQueueSize(highPriorityQueue.size),
+        LowPriorityQueueSize(lowPriorityQueue.size)
+    )
 
     init {
         scope.launch {
@@ -113,7 +122,7 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
             requestUrl?.let { url ->
                 val httpResponse = sendHttpRequestWithBackoff(url)
 
-                delay(2000) // TODO: for test
+                delay(2000) // Delay for test
 
                 if (httpResponse.status == HttpStatusCode.OK) {
                     val (queueToModify, priority) = if (highPriorityQueue.isNotEmpty()) {
@@ -132,8 +141,10 @@ class RequestQueueRepositoryImpl : RequestQueueRepository {
     }
 
     private suspend fun sendHttpRequestWithBackoff(request: Url): HttpResponse {
-        return ApiServiceImpl().sendHttpRequest(request) {
-            onNetworkError?.invoke(it)
+        return withContext(Dispatchers.IO) {
+            ApiServiceImpl().sendHttpRequest(request) {
+                onNetworkError?.invoke(it)
+            }
         }
     }
 

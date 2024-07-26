@@ -1,5 +1,6 @@
 package io.day.requestqueuekmp.domain.repository
 
+import io.day.requestqueuekmp.common.QueueSize
 import io.day.requestqueuekmp.common.QueuePriority
 import io.day.requestqueuekmp.common.Url
 
@@ -40,4 +41,9 @@ interface RequestQueueRepository {
      * Return current connection status
      */
     fun getConnectionStatus(): Boolean
+
+    /**
+     * Get size for each type queue
+     */
+    fun getQueueSize(): QueueSize
 }
