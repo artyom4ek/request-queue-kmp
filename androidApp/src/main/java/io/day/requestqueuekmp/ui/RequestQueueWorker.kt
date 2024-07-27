@@ -11,8 +11,10 @@ import io.day.requestqueuekmp.ui.common.URL
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class RequestQueueWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params),
-    KoinComponent {
+class RequestQueueWorker(
+    context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params), KoinComponent {
     private val requestQueueRepository: RequestQueueRepository by inject()
 
     override suspend fun doWork(): Result {
