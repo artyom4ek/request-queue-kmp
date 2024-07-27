@@ -10,7 +10,6 @@ import io.day.requestqueuekmp.common.QueuePriority.LOW
 import io.day.requestqueuekmp.common.Url
 import io.day.requestqueuekmp.data.common.NetworkStatus.isConnectionAvailable
 import io.day.requestqueuekmp.data.network.ApiService
-import io.day.requestqueuekmp.data.network.ApiServiceImpl
 import io.day.requestqueuekmp.domain.repository.RequestQueueRepository
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
@@ -24,7 +23,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.koin.core.component.KoinComponent
 
 class RequestQueueRepositoryImpl(
     private val apiService: ApiService
