@@ -6,7 +6,7 @@ import io.day.requestqueuekmp.data.repository.RequestQueueRepositoryImpl
 import io.day.requestqueuekmp.domain.repository.RequestQueueRepository
 import org.koin.dsl.module
 
-val commonModule = module {
+val dataModule = module {
     single<ApiService> { ApiServiceImpl() }
     single<RequestQueueRepository> { RequestQueueRepositoryImpl(get()) }
 }
